@@ -21,14 +21,3 @@ class AlertRecord:
     resolved: bool = False
     source_name: str = ""
     metadata: dict = field(default_factory=dict)
-
-
-@dataclass
-class TouristIdentity:
-    tourist_id: str
-    full_name: str
-    passport_number: str
-    nationality: str
-    email: str
-    blockchain_hash: str
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

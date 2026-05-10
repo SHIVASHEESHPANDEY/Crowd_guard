@@ -16,7 +16,7 @@ async def ingest_stream(
     if not request.rtsp_url and not request.source_name:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either rtsp_url or source_name is required",
+            detail="Either a telemetry source URL or source_name is required",
         )
     stream_id = await stream_service.register_stream(request)
     return StreamResponse(stream_id=stream_id, status="accepted")

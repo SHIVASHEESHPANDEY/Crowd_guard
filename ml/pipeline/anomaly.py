@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from statistics import mean
 
-import numpy as np
-from sklearn.ensemble import IsolationForest
-
-from ml.pipeline.types import Detection, TrackState
+from ml.pipeline.types import Detection, LakeSensorReading, TrackState
 
 
 @dataclass
@@ -17,156 +13,124 @@ class AnomalyEvent:
     metadata: dict
 
 
-class CrowdAnomalyClassifier:
+class GLOFRiskClassifier:
+    """Interpretable early-warning rules for glacier lake outburst flood risk."""
+
     def __init__(self, geofences: list[list[float]] | None = None) -> None:
         self.geofences = geofences or []
-        self.unknown_detector = IsolationForest(contamination=0.08, random_state=42)
-        self._baseline_fitted = False
-        self._feature_buffer: list[list[float]] = []
+        self._last_risk_score = 0.0
+
+    def classify_reading(self, reading: LakeSensorReading) -> list[AnomalyEvent]:
+        features = self._risk_features(reading)
+        risk_score = self._weighted_risk_score(features)
+        self._last_risk_score = risk_score
+
+        events: list[AnomalyEvent] = []
+        if risk_score >= 0.82:
+            events.append(
+                AnomalyEvent(
+                    anomaly_type="evacuation_trigger",
+                    confidence=risk_score,
+                    description="Critical GLOF probability: rapid lake rise, heavy precipitation, and moraine instability align.",
+                    metadata={"risk_score": round(risk_score, 3), "features": features, "stage": "evacuate"},
+                )
+            )
+        elif risk_score >= 0.68:
+            events.append(
+                AnomalyEvent(
+                    anomaly_type="high_glof_risk",
+                    confidence=risk_score,
+                    description="High outburst risk detected; downstream warning sirens and field verification should be activated.",
+                    metadata={"risk_score": round(risk_score, 3), "features": features, "stage": "prepare"},
+                )
+            )
+        elif risk_score >= 0.55:
+            events.append(
+                AnomalyEvent(
+                    anomaly_type="watch_condition",
+                    confidence=risk_score,
+                    description="Watch condition: lake level and melt indicators are trending above baseline.",
+                    metadata={"risk_score": round(risk_score, 3), "features": features, "stage": "watch"},
+                )
+            )
+
+        events.extend(self._threshold_events(reading, features))
+        return events
 
     def classify(
         self,
         detections: list[Detection],
         tracks: list[TrackState],
     ) -> list[AnomalyEvent]:
+        return []
+
+    @staticmethod
+    def _risk_features(reading: LakeSensorReading) -> dict[str, float]:
+        return {
+            "lake_level": _clamp((reading.lake_level_m - 41.5) / 5.0),
+            "level_rise": _clamp(reading.level_rise_cm_hr / 42.0),
+            "rainfall": _clamp(reading.rainfall_mm_hr / 38.0),
+            "temperature": _clamp((reading.air_temp_c - 2.0) / 14.0),
+            "snowmelt": _clamp(reading.snowmelt_index),
+            "moraine_instability": _clamp(1.0 - reading.moraine_stability),
+            "seismic_tremor": _clamp(reading.seismic_tremor / 7.0),
+            "satellite_change": _clamp(abs(reading.satellite_ndwi_delta) / 0.22),
+            "downstream_flow": _clamp(reading.downstream_flow_cms / 720.0),
+        }
+
+    @staticmethod
+    def _weighted_risk_score(features: dict[str, float]) -> float:
+        weights = {
+            "lake_level": 0.16,
+            "level_rise": 0.2,
+            "rainfall": 0.12,
+            "temperature": 0.08,
+            "snowmelt": 0.1,
+            "moraine_instability": 0.16,
+            "seismic_tremor": 0.08,
+            "satellite_change": 0.05,
+            "downstream_flow": 0.05,
+        }
+        return round(sum(features[name] * weight for name, weight in weights.items()), 3)
+
+    @staticmethod
+    def _threshold_events(reading: LakeSensorReading, features: dict[str, float]) -> list[AnomalyEvent]:
         events: list[AnomalyEvent] = []
-        events.extend(self._detect_position_anomalies(tracks))
-        events.extend(self._detect_movement_anomalies(tracks))
-        events.extend(self._detect_appearance_anomalies(detections))
-        events.extend(self._detect_action_anomalies(tracks))
-        events.extend(self._detect_affect_anomalies(tracks))
-        events.extend(self._detect_unknown_anomalies(tracks))
-        return events
-
-    def _detect_position_anomalies(self, tracks: list[TrackState]) -> list[AnomalyEvent]:
-        events = []
-        for track in tracks:
-            if self._inside_geofence(track.center):
-                events.append(
-                    AnomalyEvent(
-                        anomaly_type="anomalous_position",
-                        confidence=0.76,
-                        description=f"Track {track.track_id} entered restricted zone",
-                        metadata={"track_id": track.track_id, "center": track.center},
-                    )
-                )
-        return events
-
-    def _detect_movement_anomalies(self, tracks: list[TrackState]) -> list[AnomalyEvent]:
-        events = []
-        velocities = [track.velocity for track in tracks if track.class_name == "person"]
-        average_velocity = mean(velocities) if velocities else 0.0
-        for track in tracks:
-            abrupt_turn = self._trajectory_turn_score(track.trajectory)
-            if track.velocity > max(45.0, average_velocity * 2.5) or abrupt_turn > 0.7:
-                confidence = min(0.9, 0.55 + (track.velocity / 100.0) + abrupt_turn / 3.0)
-                events.append(
-                    AnomalyEvent(
-                        anomaly_type="anomalous_movement",
-                        confidence=confidence,
-                        description=f"Irregular movement detected for track {track.track_id}",
-                        metadata={
-                            "track_id": track.track_id,
-                            "velocity": track.velocity,
-                            "turn_score": round(abrupt_turn, 3),
-                        },
-                    )
-                )
-        return events
-
-    def _detect_appearance_anomalies(self, detections: list[Detection]) -> list[AnomalyEvent]:
-        unusual_classes = {"truck", "suitcase", "backpack"}
-        events = []
-        for detection in detections:
-            if detection.class_name in unusual_classes and detection.confidence > 0.6:
-                events.append(
-                    AnomalyEvent(
-                        anomaly_type="anomalous_appearance",
-                        confidence=min(0.88, detection.confidence),
-                        description=f"Unexpected {detection.class_name} detected",
-                        metadata={"bbox": detection.bbox, "class_name": detection.class_name},
-                    )
-                )
-        return events
-
-    def _detect_action_anomalies(self, tracks: list[TrackState]) -> list[AnomalyEvent]:
-        events = []
-        if len(tracks) >= 5:
-            centers = np.array([track.center for track in tracks])
-            spread = centers.std(axis=0).mean() if len(centers) else 0.0
-            group_speed = mean([track.velocity for track in tracks]) if tracks else 0.0
-            if spread < 40 and group_speed > 15:
-                events.append(
-                    AnomalyEvent(
-                        anomaly_type="anomalous_action",
-                        confidence=0.82,
-                        description="Fast dense group movement suggests panic or stampede",
-                        metadata={"spread": float(spread), "group_speed": float(group_speed)},
-                    )
-                )
-        return events
-
-    def _detect_affect_anomalies(self, tracks: list[TrackState]) -> list[AnomalyEvent]:
-        events = []
-        high_velocity_people = [track for track in tracks if track.class_name == "person" and track.velocity > 30]
-        if len(high_velocity_people) >= 4:
+        if reading.level_rise_cm_hr >= 32:
             events.append(
                 AnomalyEvent(
-                    anomaly_type="anomalous_affect",
-                    confidence=0.7,
-                    description="Collective panic-like motion inferred from pose surrogate features",
-                    metadata={"affected_tracks": [track.track_id for track in high_velocity_people]},
+                    anomaly_type="rapid_lake_rise",
+                    confidence=min(0.96, 0.55 + features["level_rise"] * 0.4),
+                    description=f"Lake level rising at {reading.level_rise_cm_hr:.1f} cm/hr, above rapid-rise threshold.",
+                    metadata={"level_rise_cm_hr": reading.level_rise_cm_hr, "sensor": "radar_gauge"},
+                )
+            )
+        if reading.moraine_stability <= 0.38 and reading.seismic_tremor >= 3.8:
+            events.append(
+                AnomalyEvent(
+                    anomaly_type="moraine_failure_signal",
+                    confidence=min(0.94, 0.58 + features["moraine_instability"] * 0.24 + features["seismic_tremor"] * 0.16),
+                    description="Moraine stability and micro-seismic tremor indicate possible breach initiation.",
+                    metadata={
+                        "moraine_stability": reading.moraine_stability,
+                        "seismic_tremor": reading.seismic_tremor,
+                    },
+                )
+            )
+        if reading.satellite_ndwi_delta >= 0.16:
+            events.append(
+                AnomalyEvent(
+                    anomaly_type="satellite_lake_expansion",
+                    confidence=min(0.86, 0.5 + features["satellite_change"] * 0.34),
+                    description="Satellite water-index change suggests rapid lake surface expansion.",
+                    metadata={"satellite_ndwi_delta": reading.satellite_ndwi_delta, "sensor": "sentinel_ndwi"},
                 )
             )
         return events
 
-    def _detect_unknown_anomalies(self, tracks: list[TrackState]) -> list[AnomalyEvent]:
-        if not tracks:
-            return []
-        features = [[track.center[0], track.center[1], track.velocity, len(track.trajectory)] for track in tracks]
-        self._feature_buffer.extend(features)
-        if len(self._feature_buffer) >= 20 and not self._baseline_fitted:
-            self.unknown_detector.fit(self._feature_buffer[:100])
-            self._baseline_fitted = True
 
-        if not self._baseline_fitted:
-            return []
+def _clamp(value: float) -> float:
+    return round(max(0.0, min(1.0, value)), 3)
 
-        predictions = self.unknown_detector.predict(features)
-        scores = self.unknown_detector.decision_function(features)
-        events = []
-        for idx, prediction in enumerate(predictions):
-            if prediction == -1:
-                confidence = min(0.92, 0.5 + abs(float(scores[idx])))
-                events.append(
-                    AnomalyEvent(
-                        anomaly_type="unknown_anomaly",
-                        confidence=confidence,
-                        description=f"Novel anomaly pattern detected for track {tracks[idx].track_id}",
-                        metadata={"track_id": tracks[idx].track_id, "score": float(scores[idx])},
-                    )
-                )
-        return events
 
-    def _inside_geofence(self, center: tuple[float, float]) -> bool:
-        for zone in self.geofences:
-            if len(zone) != 4:
-                continue
-            x1, y1, x2, y2 = zone
-            if x1 <= center[0] <= x2 and y1 <= center[1] <= y2:
-                return True
-        return False
-
-    @staticmethod
-    def _trajectory_turn_score(trajectory: list[tuple[float, float]]) -> float:
-        if len(trajectory) < 3:
-            return 0.0
-        p1 = np.array(trajectory[-3])
-        p2 = np.array(trajectory[-2])
-        p3 = np.array(trajectory[-1])
-        v1 = p2 - p1
-        v2 = p3 - p2
-        if np.linalg.norm(v1) == 0 or np.linalg.norm(v2) == 0:
-            return 0.0
-        cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-        return float((1 - np.clip(cos_theta, -1.0, 1.0)) / 2)
+CrowdAnomalyClassifier = GLOFRiskClassifier

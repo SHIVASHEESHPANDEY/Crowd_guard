@@ -1,80 +1,79 @@
-# Crowd Guard Architecture
+# GLOF Sentinel Architecture
 
-## End-to-End Architecture
+## Goal
 
-```mermaid
-flowchart LR
-    subgraph Ingestion["Video Ingestion Layer"]
-        CCTV["CCTV Cameras"]
-        DRONE["Drone Feeds"]
-        RTSP["RTSP / WebRTC Streams"]
-    end
+GLOF Sentinel predicts Glacier Lake Outburst Flood risk early enough for disaster-management teams to verify field conditions, notify downstream villages, and trigger evacuation procedures.
 
-    subgraph Edge["Edge Deployment Layer"]
-        GATEWAY["Raspberry Pi / Jetson / GPU Gateway"]
-        PRE["Preprocessing Pipeline
-        - Frame extraction
-        - Noise reduction
-        - Face blurring
-        - Geo-fence calibration"]
-        INFER["AI Inference Engine
-        YOLOv8 + DeepSORT"]
-        ANOM["Anomaly Classification
-        Position / Movement / Appearance / Action / Affect / Unknown"]
-    end
+## Data Inputs
 
-    subgraph Alerting["Alert Generation & Verification"]
-        RULES["Confidence & Escalation Rules"]
-        VERIFY["Human-in-the-loop Verification"]
-        NOTIFY["SMS / WhatsApp / Push / Email"]
-    end
+| Signal | Example Source | Why It Matters |
+| --- | --- | --- |
+| Lake level | Radar or pressure gauge | Direct proxy for overtopping pressure |
+| Level rise rate | Gauge derivative | Detects sudden inflow or blockage failure |
+| Rainfall | Automatic weather station | Drives inflow and slope instability |
+| Temperature and snowmelt | Weather station or reanalysis | Captures meltwater loading |
+| Moraine stability | Ground sensors, inspections | Estimates dam-breach vulnerability |
+| Seismic tremor | Local geophone | Flags ice/rockfall or moraine movement |
+| Satellite NDWI delta | Sentinel/Landsat imagery | Detects lake surface expansion |
+| Downstream discharge | River gauge | Validates propagation into exposed valleys |
 
-    subgraph Platform["Backend & Data Services"]
-        API["FastAPI REST + WebSocket API"]
-        WS["/ws/alerts"]
-        HEAT["Live Heatmap Service"]
-        TOURIST["Blockchain Tourist ID Service"]
-        STORE["Alert Store / Audit Log"]
-        CLOUD["AWS S3 / Firebase Storage"]
-    end
+## Runtime Flow
 
-    subgraph UI["Real-Time Dashboard"]
-        REACT["React.js Control Center"]
-        MAP["Heatmap + Camera Views"]
-        CASES["Alert Queue & Incident Timeline"]
-    end
+1. Telemetry enters the ML pipeline as `LakeSensorReading`.
+2. The classifier normalizes features into comparable risk contributions.
+3. Weighted risk scoring produces a 0-1 GLOF risk probability surrogate.
+4. Threshold logic emits staged operational alerts with feature metadata.
+5. FastAPI stores alerts in memory for the prototype and broadcasts new warnings over WebSocket.
+6. React renders a basin risk map, alert feed, and command controls.
 
-    CCTV --> GATEWAY
-    DRONE --> GATEWAY
-    RTSP --> GATEWAY
-    GATEWAY --> PRE --> INFER --> ANOM
-    ANOM --> RULES --> API
-    RULES --> VERIFY
-    VERIFY --> NOTIFY
-    API --> WS
-    API --> HEAT
-    API --> TOURIST
-    API --> STORE
-    API --> CLOUD
-    WS --> REACT
-    HEAT --> MAP
-    API --> CASES
-    TOURIST --> REACT
-```
+## Risk Model
 
-## Processing Flow
+The prototype intentionally uses an interpretable model so interviewers and reviewers can inspect why the system raised a warning. The risk score is a weighted sum:
 
-1. Streams enter through edge gateways near camera sources.
-2. Frames are sampled, denoised, and privacy protected with face anonymization.
-3. YOLOv8 detects people, vehicles, and objects while DeepSORT maintains tracking IDs.
-4. Anomaly engines score position, movement, appearance, action, affect, and unknown patterns.
-5. Alerts are confidence-ranked, optionally operator-verified, and distributed through Twilio, push, and email.
-6. Metadata, anonymized frames, and audit records are stored in backend services and cloud storage.
-7. The dashboard consumes live alerts and crowd heatmaps over REST and WebSocket APIs.
+- lake level: 16%
+- level rise rate: 20%
+- rainfall: 12%
+- temperature: 8%
+- snowmelt: 10%
+- moraine instability: 16%
+- seismic tremor: 8%
+- satellite lake expansion: 5%
+- downstream flow: 5%
 
-## Privacy and Security
+This can be upgraded to a trained classifier once labeled GLOF and non-GLOF time series are available. The same pipeline interface can host Random Forest, XGBoost, LSTM, or temporal transformer models.
 
-- Face blurring is applied before storage and downstream analytics.
-- JWT protects authority endpoints.
-- Tourist identities are hash-anchored for tamper-evident verification.
-- Edge inference reduces raw video egress and improves latency.
+## Alert Stages
+
+| Stage | Risk Band | Operational Meaning |
+| --- | --- | --- |
+| Watch | 0.55-0.67 | Increased monitoring and manual verification |
+| Prepare | 0.68-0.81 | Notify field teams and ready downstream response |
+| Evacuate | 0.82+ | Critical warning for evacuation and siren activation |
+
+## Backend
+
+The backend uses FastAPI with:
+
+- JWT login for disaster-cell users
+- `/api/stream` to register demo or real telemetry streams
+- `/api/alerts` to query paginated alerts
+- `/api/heatmap/live` to return basin risk-map points
+- `/ws/alerts` for real-time warning delivery
+- notification-service adapter methods for SMS, WhatsApp, push, email, or siren integrations
+
+## Frontend
+
+The React dashboard is optimized for operations:
+
+- a compact basin command view
+- live warning feed with severity and confidence
+- risk map showing lake basin, moraine dam, river channel, and village exposure
+- one-click demo scenario for project presentations
+
+## Production Deployment Plan
+
+- Ingestion: MQTT or Kafka for sensor data, scheduled satellite jobs for NDWI.
+- Storage: PostgreSQL/PostGIS for lakes, settlements, sensor history, and alert audit trails.
+- Model serving: versioned ML service with calibration reports and drift monitoring.
+- Alert delivery: redundant SMS, siren, WhatsApp, CAP feeds, and district control-room dashboards.
+- Reliability: health checks, retry queues, alert deduplication, role-based access, and incident logs.

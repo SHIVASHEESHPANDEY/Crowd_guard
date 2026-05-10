@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from ml.pipeline.anomaly import CrowdAnomalyClassifier
+from ml.pipeline.anomaly import GLOFRiskClassifier
 from ml.pipeline.demo import DemoScenarioGenerator
 from ml.pipeline.preprocessing import VideoPreprocessor
 
@@ -12,7 +12,7 @@ AlertCallback = Callable[[str, str, float, str, str, dict | None], Awaitable[obj
 TelemetryCallback = Callable[[str, list[dict], list[dict]], Awaitable[object]]
 
 
-class CrowdGuardPipeline:
+class GLOFEarlyWarningPipeline:
     def __init__(
         self,
         stream_id: str,
@@ -28,7 +28,7 @@ class CrowdGuardPipeline:
         self.source_name = source_name
         self.source_type = source_type
         self.preprocessor = VideoPreprocessor()
-        self.classifier = CrowdAnomalyClassifier(geofences=geofences)
+        self.classifier = GLOFRiskClassifier(geofences=geofences)
         self.alert_callback = alert_callback
         self.telemetry_callback = telemetry_callback
         self.alert_threshold = 0.6
@@ -109,3 +109,6 @@ class CrowdGuardPipeline:
             for track in tracks
         ]
         await self.telemetry_callback(self.stream_id, heatmap_points, track_payload)
+
+
+CrowdGuardPipeline = GLOFEarlyWarningPipeline

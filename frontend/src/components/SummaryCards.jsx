@@ -5,16 +5,16 @@ export function SummaryCards({ alerts }) {
   return (
     <section className="summary-row">
       <article className="summary-card">
-        <span>Critical Events</span>
+        <span>Evacuation Alerts</span>
         <strong>{critical}</strong>
       </article>
       <article className="summary-card">
-        <span>Warnings</span>
+        <span>Watch Warnings</span>
         <strong>{warning}</strong>
       </article>
       <article className="summary-card">
-        <span>Monitored Feeds</span>
-        <strong>3</strong>
+        <span>Sensor Groups</span>
+        <strong>5</strong>
       </article>
     </section>
   );

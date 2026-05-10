@@ -6,11 +6,12 @@ export function ControlPanel({ onStartDemo, starting, sourceStatus, error }) {
         <span>{sourceStatus}</span>
       </div>
       <p className="helper-text">
-        Start the built-in demo stream to simulate crowd anomalies without a live CCTV feed.
+        Start a basin simulation that fuses lake gauge, rainfall, snowmelt, seismic,
+        satellite, and downstream flow telemetry.
       </p>
       {error ? <p className="error-text">{error}</p> : null}
-      <button className="primary-btn" onClick={() => onStartDemo("panic")} disabled={starting}>
-        {starting ? "Starting demo..." : "Start Demo Monitoring"}
+      <button className="primary-btn" onClick={() => onStartDemo("monsoon_breach")} disabled={starting}>
+        {starting ? "Starting simulation..." : "Start GLOF Simulation"}
       </button>
     </section>
   );

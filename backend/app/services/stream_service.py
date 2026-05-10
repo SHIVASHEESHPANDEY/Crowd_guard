@@ -13,12 +13,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.schemas.stream import StreamRequest
 from app.services.alert_service import alert_service
 from app.services.runtime_state import runtime_state
-from ml.pipeline.orchestrator import CrowdGuardPipeline
+from ml.pipeline.orchestrator import GLOFEarlyWarningPipeline
 
 
 class StreamService:
     def __init__(self) -> None:
-        self._pipelines: dict[str, CrowdGuardPipeline] = {}
+        self._pipelines: dict[str, GLOFEarlyWarningPipeline] = {}
         self._threads: dict[str, threading.Thread] = {}
 
     async def register_stream(self, request: StreamRequest) -> str:
@@ -30,21 +30,21 @@ class StreamService:
                 stream_id=stream_id,
                 points=[
                     {"x": 0.22, "y": 0.34, "intensity": 0.62},
-                    {"x": 0.38, "y": 0.47, "intensity": 0.75},
-                    {"x": 0.51, "y": 0.41, "intensity": 0.58},
-                    {"x": 0.66, "y": 0.53, "intensity": 0.81},
+                    {"x": 0.43, "y": 0.39, "intensity": 0.48},
+                    {"x": 0.58, "y": 0.58, "intensity": 0.52},
+                    {"x": 0.74, "y": 0.74, "intensity": 0.36},
                 ],
                 tracks=[],
             )
             await alert_service.raise_alert(
                 stream_id=stream_id,
-                anomaly_type="system_bootstrap",
+                anomaly_type="monitoring_started",
                 confidence=0.61,
-                description="Demo monitoring activated. Live anomaly simulation is now running.",
+                description="GLOF monitoring activated for the demo basin. Sensor fusion and risk scoring are live.",
                 source_name=source_name,
                 metadata={"mode": "demo"},
             )
-        pipeline = CrowdGuardPipeline(
+        pipeline = GLOFEarlyWarningPipeline(
             stream_id=stream_id,
             source_name=source_name,
             source_type=request.source_type,
@@ -59,7 +59,7 @@ class StreamService:
             target=self._run_pipeline,
             args=(pipeline, request.rtsp_url),
             daemon=True,
-            name=f"crowdguard-{stream_id}",
+            name=f"glof-sentinel-{stream_id}",
         )
         self._threads[stream_id] = thread
         thread.start()

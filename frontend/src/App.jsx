@@ -9,7 +9,7 @@ import { fetchAlerts, fetchHeatmap, login, openAlertsSocket, startDemoStream } f
 export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [heatmap, setHeatmap] = useState([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem("crowd_guard_token")));
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem("glof_sentinel_token")));
   const [authError, setAuthError] = useState("");
   const [panelError, setPanelError] = useState("");
   const [loadingLogin, setLoadingLogin] = useState(false);
@@ -55,7 +55,7 @@ export default function App() {
     const socket = openAlertsSocket((message) => {
       if (message.event === "alert.created") {
         setAlerts((current) => [message.data, ...current].slice(0, 20));
-        setSourceStatus("Live alerts streaming");
+        setSourceStatus("Warnings streaming");
       }
     });
 
@@ -72,7 +72,7 @@ export default function App() {
     try {
       await login(username, password);
       setIsAuthenticated(true);
-      setSourceStatus("Authority session active");
+      setSourceStatus("Basin command session active");
     } catch (error) {
       setAuthError(error?.response?.data?.detail ?? "Sign in failed.");
     } finally {
@@ -85,7 +85,7 @@ export default function App() {
     setPanelError("");
     try {
       await startDemoStream(profile);
-      setSourceStatus("Demo stream running");
+      setSourceStatus("Telemetry simulation running");
     } catch (error) {
       setPanelError(error?.response?.data?.detail ?? "Unable to start demo monitoring.");
     } finally {
@@ -97,11 +97,11 @@ export default function App() {
     <main className="app-shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">Crowd Guard</p>
-          <h1>AI-powered crowd anomaly response center</h1>
+          <p className="eyebrow">GLOF Sentinel</p>
+          <h1>Glacier lake outburst flood early warning system</h1>
           <p className="subtitle">
-            Edge-first detection, privacy-preserving analytics, live heatmaps,
-            and tamper-evident tourist identity verification.
+            Sensor-fusion risk scoring for lake rise, rainfall, snowmelt, moraine stability,
+            seismic tremor, satellite change detection, and downstream evacuation triggers.
           </p>
         </div>
       </section>
@@ -127,12 +127,13 @@ export default function App() {
           />
           <section className="panel">
             <div className="panel-header">
-              <h2>System Status</h2>
-              <span>Backend-driven UI</span>
+              <h2>Decision Logic</h2>
+              <span>Interpretable AI</span>
             </div>
             <p className="helper-text">
-              This dashboard does not perform detection itself. It visualizes alerts and heatmap
-              data produced by the backend AI pipeline and WebSocket stream.
+              The dashboard visualizes backend-generated risk scores and alerts. Each warning
+              carries the contributing hydrology, weather, satellite, and stability features used
+              by the prediction pipeline.
             </p>
           </section>
         </section>

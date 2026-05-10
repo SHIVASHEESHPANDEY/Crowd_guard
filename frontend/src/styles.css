@@ -1,13 +1,15 @@
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", sans-serif;
-  --bg: #f4f0e8;
-  --panel: rgba(255, 252, 247, 0.9);
-  --ink: #122026;
-  --muted: #5b676f;
-  --accent: #d95d39;
-  --critical: #b3261e;
-  --warning: #d98e04;
+  font-family: "Segoe UI", Arial, sans-serif;
+  --bg: #eef3f4;
+  --panel: #ffffff;
+  --ink: #172126;
+  --muted: #60717a;
+  --line: #d6e0e3;
+  --accent: #087f8c;
+  --critical: #b42318;
+  --warning: #b76e00;
+  --safe: #287d3c;
 }
 
 * {
@@ -18,42 +20,68 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(217, 93, 57, 0.18), transparent 28%),
-    linear-gradient(135deg, #f4f0e8, #dfe8e5);
+    linear-gradient(180deg, rgba(7, 51, 61, 0.09), transparent 260px),
+    linear-gradient(135deg, #eef3f4, #f8faf8 55%, #e6eef1);
   color: var(--ink);
 }
 
 .app-shell {
-  max-width: 1200px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 32px 20px 48px;
+  padding: 28px 18px 44px;
 }
 
 .hero {
-  background: linear-gradient(135deg, rgba(18, 32, 38, 0.94), rgba(42, 75, 82, 0.88));
-  border-radius: 28px;
+  min-height: 210px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 8px;
   color: white;
-  padding: 32px;
-  box-shadow: 0 24px 60px rgba(18, 32, 38, 0.18);
+  padding: 28px;
+  background:
+    linear-gradient(90deg, rgba(6, 31, 38, 0.92), rgba(6, 31, 38, 0.58)),
+    linear-gradient(140deg, #173f48 0%, #087f8c 48%, #d8e7ea 100%);
+  box-shadow: 0 16px 40px rgba(7, 31, 38, 0.16);
 }
 
 .eyebrow {
+  margin: 0 0 8px;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #ffd9cd;
+  color: #b6e3e8;
   font-size: 0.8rem;
+  font-weight: 700;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 780px;
+  margin-bottom: 12px;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1.02;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.05rem;
 }
 
 .subtitle {
-  max-width: 700px;
-  color: rgba(255, 255, 255, 0.8);
+  max-width: 780px;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.86);
+  line-height: 1.5;
 }
 
 .summary-row,
 .grid {
   display: grid;
-  gap: 18px;
-  margin-top: 22px;
+  gap: 16px;
+  margin-top: 18px;
 }
 
 .summary-row {
@@ -61,27 +89,32 @@ body {
 }
 
 .grid {
-  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(300px, 1.12fr) minmax(320px, 0.88fr);
 }
 
 .secondary-grid {
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .summary-card,
 .panel {
   background: var(--panel);
-  backdrop-filter: blur(12px);
-  border-radius: 24px;
-  padding: 20px;
-  border: 1px solid rgba(18, 32, 38, 0.07);
-  box-shadow: 0 18px 45px rgba(18, 32, 38, 0.08);
+  border-radius: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(7, 31, 38, 0.08);
+}
+
+.summary-card span,
+.panel-header span,
+small {
+  color: var(--muted);
 }
 
 .summary-card strong {
   display: block;
-  margin-top: 10px;
-  font-size: 2rem;
+  margin-top: 8px;
+  font-size: 2.1rem;
 }
 
 .auth-panel,
@@ -91,31 +124,31 @@ body {
 }
 
 .field {
-  gap: 8px;
-  margin-top: 14px;
+  gap: 7px;
+  margin-top: 12px;
 }
 
 .field input {
-  border: 1px solid rgba(18, 32, 38, 0.15);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border: 1px solid #c9d6d9;
+  border-radius: 6px;
+  padding: 11px 12px;
   font: inherit;
 }
 
 .primary-btn {
   margin-top: 16px;
   border: none;
-  border-radius: 999px;
-  padding: 12px 18px;
-  background: linear-gradient(135deg, #d95d39, #ba4120);
+  border-radius: 6px;
+  padding: 12px 16px;
+  background: var(--accent);
   color: white;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .primary-btn:disabled {
   cursor: wait;
-  opacity: 0.7;
+  opacity: 0.72;
 }
 
 .helper-text {
@@ -140,21 +173,56 @@ body {
   position: relative;
   margin-top: 14px;
   min-height: 360px;
-  border-radius: 20px;
+  border-radius: 8px;
   overflow: hidden;
   background:
-    linear-gradient(rgba(18, 32, 38, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(18, 32, 38, 0.08) 1px, transparent 1px),
-    linear-gradient(135deg, #f8f5f0, #dce6de);
-  background-size: 36px 36px, 36px 36px, auto;
+    linear-gradient(158deg, #dfeff1 0 27%, #cfd7d0 27% 44%, #9fb8a4 44% 64%, #e7ece8 64% 100%);
+  border: 1px solid var(--line);
+}
+
+.heatmap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(130deg, transparent 0 40%, rgba(8, 127, 140, 0.28) 40% 47%, transparent 47%),
+    repeating-linear-gradient(90deg, rgba(23, 33, 38, 0.06) 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(0deg, rgba(23, 33, 38, 0.06) 0 1px, transparent 1px 44px);
+}
+
+.terrain-label {
+  position: absolute;
+  z-index: 1;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #203037;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.terrain-label.lake {
+  left: 9%;
+  top: 12%;
+}
+
+.terrain-label.moraine {
+  left: 34%;
+  top: 35%;
+}
+
+.terrain-label.village {
+  right: 8%;
+  bottom: 13%;
 }
 
 .heat-dot {
   position: absolute;
-  width: 26px;
-  height: 26px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(217, 93, 57, 0.9), rgba(217, 93, 57, 0));
+  background: radial-gradient(circle, rgba(180, 35, 24, 0.9), rgba(183, 110, 0, 0.45) 45%, rgba(183, 110, 0, 0));
   animation: pulse 2.4s ease-in-out infinite;
 }
 
@@ -162,16 +230,22 @@ body {
   margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-height: 420px;
   overflow: auto;
 }
 
 .alert-card {
   border-left: 4px solid var(--accent);
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: white;
+  padding: 13px 14px;
+  border-radius: 8px;
+  background: #f8fbfb;
+}
+
+.alert-card p {
+  margin-bottom: 8px;
+  color: #2d3b41;
+  line-height: 1.42;
 }
 
 .severity-critical {
@@ -184,15 +258,20 @@ body {
 
 @keyframes pulse {
   0%, 100% {
-    transform: scale(0.85);
+    transform: scale(0.9);
   }
   50% {
-    transform: scale(1.2);
+    transform: scale(1.18);
   }
 }
 
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: 260px;
+    padding: 22px;
   }
 }
