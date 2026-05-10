@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from app.core.auth import hash_password
-from app.models.domain import AlertRecord, AuthorityUser
+from app.models.domain import AlertRecord, AuthorityUser, TouristIdentity
 
 
 class AuthorityRepository:
@@ -11,7 +11,7 @@ class AuthorityRepository:
         self._users = {
             "admin": AuthorityUser(
                 username="admin",
-                hashed_password=hash_password("glofsentinel123"),
+                hashed_password=hash_password("crowdguard123"),
             )
         }
 
@@ -33,5 +33,17 @@ class AlertRepository:
         return (item for item in self._alerts if not item.resolved)
 
 
+class TouristRepository:
+    def __init__(self) -> None:
+        self._tourists: dict[str, TouristIdentity] = {}
+
+    def save(self, tourist: TouristIdentity) -> None:
+        self._tourists[tourist.tourist_id] = tourist
+
+    def get(self, tourist_id: str) -> TouristIdentity | None:
+        return self._tourists.get(tourist_id)
+
+
 authority_repository = AuthorityRepository()
 alert_repository = AlertRepository()
+tourist_repository = TouristRepository()

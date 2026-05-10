@@ -2,7 +2,7 @@ export function AlertPanel({ alerts }) {
   return (
     <section className="panel">
       <div className="panel-header">
-        <h2>Warning Feed</h2>
+        <h2>Live Alerts</h2>
         <span>{alerts.length} active</span>
       </div>
       <div className="alert-list">
@@ -13,13 +13,12 @@ export function AlertPanel({ alerts }) {
               <span>{Math.round(alert.confidence * 100)}%</span>
             </div>
             <p>{alert.description}</p>
-            <small>
-              {alert.source_name || alert.stream_id}
-              {alert.metadata?.risk_score ? ` | risk ${Math.round(alert.metadata.risk_score * 100)}%` : ""}
-            </small>
+            <small>{alert.source_name || alert.stream_id}</small>
           </article>
         ))}
-        {alerts.length === 0 ? <p className="helper-text">No warnings yet. Start the simulation to stream basin telemetry.</p> : null}
+        {alerts.length === 0 ? (
+          <p className="helper-text">No alerts yet. Start the demo monitoring flow to simulate crowd anomalies.</p>
+        ) : null}
       </div>
     </section>
   );

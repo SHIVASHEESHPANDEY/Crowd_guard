@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from ml.pipeline.anomaly import GLOFRiskClassifier
+from ml.pipeline.anomaly import CrowdAnomalyClassifier
 from ml.pipeline.demo import DemoScenarioGenerator
 from ml.pipeline.preprocessing import VideoPreprocessor
 
@@ -12,7 +12,7 @@ AlertCallback = Callable[[str, str, float, str, str, dict | None], Awaitable[obj
 TelemetryCallback = Callable[[str, list[dict], list[dict]], Awaitable[object]]
 
 
-class GLOFEarlyWarningPipeline:
+class CrowdGuardPipeline:
     def __init__(
         self,
         stream_id: str,
@@ -28,14 +28,12 @@ class GLOFEarlyWarningPipeline:
         self.source_name = source_name
         self.source_type = source_type
         self.preprocessor = VideoPreprocessor()
-        self.classifier = GLOFRiskClassifier(geofences=geofences)
+        self.classifier = CrowdAnomalyClassifier(geofences=geofences)
         self.alert_callback = alert_callback
         self.telemetry_callback = telemetry_callback
         self.alert_threshold = 0.6
         self.frame_limit = frame_limit
         self.anomaly_profile = anomaly_profile
-        self.detector = None
-        self.tracker = None
         self.demo_generator = DemoScenarioGenerator()
 
     async def run(self, source: str | None) -> None:
@@ -46,11 +44,11 @@ class GLOFEarlyWarningPipeline:
         from ml.pipeline.detection import YOLODetector
         from ml.pipeline.tracking import MultiObjectTracker
 
-        self.detector = YOLODetector()
-        self.tracker = MultiObjectTracker()
+        detector = YOLODetector()
+        tracker = MultiObjectTracker()
         for frame_index, frame in self.preprocessor.extract_frames(source):
-            detections = self.detector.detect(frame)
-            tracks = self.tracker.update(detections)
+            detections = detector.detect(frame)
+            tracks = tracker.update(detections)
             await self._emit_heatmap(tracks)
             events = self.classifier.classify(detections, tracks)
             for event in events:
@@ -109,6 +107,3 @@ class GLOFEarlyWarningPipeline:
             for track in tracks
         ]
         await self.telemetry_callback(self.stream_id, heatmap_points, track_payload)
-
-
-CrowdGuardPipeline = GLOFEarlyWarningPipeline

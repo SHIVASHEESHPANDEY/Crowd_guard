@@ -2,12 +2,12 @@ import { useState } from "react";
 
 export function LoginPanel({ onLogin, loading, error }) {
   const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("glofsentinel123");
+  const [password, setPassword] = useState("crowdguard123");
 
   return (
     <section className="panel auth-panel">
       <div className="panel-header">
-        <h2>Disaster Cell Login</h2>
+        <h2>Authority Login</h2>
         <span>Prototype credentials prefilled</span>
       </div>
       <label className="field">

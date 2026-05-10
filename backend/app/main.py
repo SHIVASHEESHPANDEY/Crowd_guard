@@ -5,14 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import alerts, auth, heatmap, stream
+from app.api.routes import alerts, auth, heatmap, stream, tourist
 from app.websocket.alerts import router as ws_router
 
 
 app = FastAPI(
-    title="GLOF Sentinel API",
+    title="Crowd Guard API",
     version="1.0.0",
-    description="Early warning backend for glacier lake outburst flood prediction and evacuation alerts.",
+    description="Crowd anomaly detection backend for tourist and street safety.",
 )
 
 app.add_middleware(
@@ -34,9 +34,11 @@ async def enforce_response_budget(request, call_next):
     response.headers["X-Process-Time"] = f"{time.perf_counter() - started:.4f}"
     return response
 
+
 app.include_router(auth.router, prefix="/api")
 app.include_router(stream.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
+app.include_router(tourist.router, prefix="/api")
 app.include_router(heatmap.router, prefix="/api")
 app.include_router(ws_router)
 

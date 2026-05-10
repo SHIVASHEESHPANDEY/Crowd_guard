@@ -1,79 +1,98 @@
-# GLOF Sentinel Architecture
+# Crowd Guard Architecture
 
-## Goal
+## End-to-End System Diagram
 
-GLOF Sentinel predicts Glacier Lake Outburst Flood risk early enough for disaster-management teams to verify field conditions, notify downstream villages, and trigger evacuation procedures.
+```mermaid
+flowchart LR
+    subgraph Ingestion["Video Ingestion Layer"]
+        CCTV["CCTV Cameras"]
+        DRONE["Drone Feeds"]
+        RTSP["RTSP / WebRTC Streams"]
+    end
 
-## Data Inputs
+    subgraph Edge["Edge Deployment Layer"]
+        EDGEBOX["Raspberry Pi / Jetson / Edge GPU"]
+        PRE["Preprocessing Pipeline
+        - Frame extraction
+        - Noise reduction
+        - Face blurring
+        - Geo-fence mapping"]
+        INFER["AI Inference Engine
+        YOLOv8 + DeepSORT"]
+        ANOM["Anomaly Classification
+        Position / Movement / Appearance / Action / Affect / Unknown"]
+    end
 
-| Signal | Example Source | Why It Matters |
-| --- | --- | --- |
-| Lake level | Radar or pressure gauge | Direct proxy for overtopping pressure |
-| Level rise rate | Gauge derivative | Detects sudden inflow or blockage failure |
-| Rainfall | Automatic weather station | Drives inflow and slope instability |
-| Temperature and snowmelt | Weather station or reanalysis | Captures meltwater loading |
-| Moraine stability | Ground sensors, inspections | Estimates dam-breach vulnerability |
-| Seismic tremor | Local geophone | Flags ice/rockfall or moraine movement |
-| Satellite NDWI delta | Sentinel/Landsat imagery | Detects lake surface expansion |
-| Downstream discharge | River gauge | Validates propagation into exposed valleys |
+    subgraph Core["Backend and Intelligence Services"]
+        API["FastAPI REST API"]
+        WS["WebSocket Alert Stream"]
+        HEAT["Live Heatmap Service"]
+        TOURIST["Digital Tourist ID Service"]
+        VERIFY["Alert Verification and Escalation"]
+        STORE["Alert Store and Audit Log"]
+        CLOUD["AWS S3 / Firebase Storage"]
+    end
+
+    subgraph Notify["Notification System"]
+        TWILIO["Twilio SMS / WhatsApp"]
+        PUSH["Push Notifications"]
+        EMAIL["Email Digest"]
+    end
+
+    subgraph UI["Real-Time Dashboard"]
+        DASH["React.js Operations Console"]
+        MAP["Density Heatmap and Camera View"]
+        FEED["Incident Timeline and Alert Queue"]
+    end
+
+    CCTV --> EDGEBOX
+    DRONE --> EDGEBOX
+    RTSP --> EDGEBOX
+    EDGEBOX --> PRE --> INFER --> ANOM
+    ANOM --> API
+    ANOM --> VERIFY
+    API --> WS
+    API --> HEAT
+    API --> TOURIST
+    API --> STORE
+    API --> CLOUD
+    VERIFY --> TWILIO
+    VERIFY --> PUSH
+    VERIFY --> EMAIL
+    WS --> DASH
+    HEAT --> MAP
+    API --> FEED
+    TOURIST --> DASH
+```
 
 ## Runtime Flow
 
-1. Telemetry enters the ML pipeline as `LakeSensorReading`.
-2. The classifier normalizes features into comparable risk contributions.
-3. Weighted risk scoring produces a 0-1 GLOF risk probability surrogate.
-4. Threshold logic emits staged operational alerts with feature metadata.
-5. FastAPI stores alerts in memory for the prototype and broadcasts new warnings over WebSocket.
-6. React renders a basin risk map, alert feed, and command controls.
+1. CCTV, drone, or RTSP feeds are registered through the backend.
+2. Frames are extracted and anonymized with face blurring before deeper processing.
+3. YOLOv8 identifies people, vehicles, and suspicious objects.
+4. DeepSORT maintains object identity across frames.
+5. The anomaly engine scores:
+   - anomalous position
+   - anomalous movement
+   - anomalous appearance
+   - anomalous action
+   - anomalous affect
+   - unknown anomaly patterns
+6. Alerts are confidence-ranked, stored, broadcast to the dashboard, and passed into escalation logic.
+7. Heatmap points and live alert telemetry are exposed to the React dashboard.
+8. Tourist IDs can be registered and verified through a blockchain-style hashing layer.
 
-## Risk Model
+## Privacy and Security
 
-The prototype intentionally uses an interpretable model so interviewers and reviewers can inspect why the system raised a warning. The risk score is a weighted sum:
+- Face anonymization happens before downstream analytics.
+- Authority APIs use JWT authentication.
+- Tourist IDs are anchored using deterministic hashing for tamper-evident verification.
+- Edge-first processing reduces unnecessary raw video transfer.
+- Cloud integrations should use encrypted object storage and signed-access patterns.
 
-- lake level: 16%
-- level rise rate: 20%
-- rainfall: 12%
-- temperature: 8%
-- snowmelt: 10%
-- moraine instability: 16%
-- seismic tremor: 8%
-- satellite lake expansion: 5%
-- downstream flow: 5%
+## Deployment Strategy
 
-This can be upgraded to a trained classifier once labeled GLOF and non-GLOF time series are available. The same pipeline interface can host Random Forest, XGBoost, LSTM, or temporal transformer models.
-
-## Alert Stages
-
-| Stage | Risk Band | Operational Meaning |
-| --- | --- | --- |
-| Watch | 0.55-0.67 | Increased monitoring and manual verification |
-| Prepare | 0.68-0.81 | Notify field teams and ready downstream response |
-| Evacuate | 0.82+ | Critical warning for evacuation and siren activation |
-
-## Backend
-
-The backend uses FastAPI with:
-
-- JWT login for disaster-cell users
-- `/api/stream` to register demo or real telemetry streams
-- `/api/alerts` to query paginated alerts
-- `/api/heatmap/live` to return basin risk-map points
-- `/ws/alerts` for real-time warning delivery
-- notification-service adapter methods for SMS, WhatsApp, push, email, or siren integrations
-
-## Frontend
-
-The React dashboard is optimized for operations:
-
-- a compact basin command view
-- live warning feed with severity and confidence
-- risk map showing lake basin, moraine dam, river channel, and village exposure
-- one-click demo scenario for project presentations
-
-## Production Deployment Plan
-
-- Ingestion: MQTT or Kafka for sensor data, scheduled satellite jobs for NDWI.
-- Storage: PostgreSQL/PostGIS for lakes, settlements, sensor history, and alert audit trails.
-- Model serving: versioned ML service with calibration reports and drift monitoring.
-- Alert delivery: redundant SMS, siren, WhatsApp, CAP feeds, and district control-room dashboards.
-- Reliability: health checks, retry queues, alert deduplication, role-based access, and incident logs.
+- Edge inference for low-latency monitoring
+- FastAPI backend as the coordination and alerting layer
+- React dashboard for command and monitoring teams
+- Optional PostgreSQL, Redis, S3, Firebase, Twilio, and FCM integrations for production
